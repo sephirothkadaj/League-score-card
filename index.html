@@ -104,6 +104,22 @@
   }
   .team-input:focus { border-color: var(--gold); }
   .team-input::placeholder { color: rgba(255,255,255,0.4); }
+  .btn-load-roster {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    background: rgba(255,255,255,0.1);
+    color: var(--gold);
+    border: 1px solid rgba(230,168,23,0.4);
+    border-radius: 5px;
+    padding: 4px 10px;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-load-roster:active { background: rgba(230,168,23,0.25); }
+  .btn-load-roster:disabled { opacity: 0.35; cursor: default; }
   .team-total {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 36px;
@@ -335,16 +351,19 @@
   <div class="teams">
     <div class="team-box team-home" id="homeBox">
       <div class="team-label">HOME</div>
-      <input class="team-input" id="homeTeam" placeholder="Team Name">
+      <input class="team-input" id="homeTeam" placeholder="Team Name" list="teamList" autocomplete="off">
+      <button class="btn-load-roster" id="loadHomeRoster" disabled>LOAD ROSTER</button>
       <div class="team-total" id="homeTotal">0</div>
     </div>
     <div class="team-vs">VS</div>
     <div class="team-box team-away" id="awayBox">
       <div class="team-label">AWAY</div>
-      <input class="team-input" id="awayTeam" placeholder="Team Name">
+      <input class="team-input" id="awayTeam" placeholder="Team Name" list="teamList" autocomplete="off">
+      <button class="btn-load-roster" id="loadAwayRoster" disabled>LOAD ROSTER</button>
       <div class="team-total" id="awayTotal">0</div>
     </div>
   </div>
+  <datalist id="teamList"></datalist>
 
   <!-- Sections will be built by JS -->
   <div id="sectionsContainer"></div>
@@ -539,6 +558,7 @@
       el.classList.remove('home-checked', 'away-checked', 'disabled');
     });
     updateTotals();
+    enableLoadButtons();
   });
 
   // ---- PDF Export ----
@@ -663,6 +683,85 @@
 
     doc.save('SSPL_' + homeLabel.replace(/\s+/g, '_') + '_vs_' + awayLabel.replace(/\s+/g, '_') + '.pdf');
   });
+
+  // ---- Roster Loading ----
+  let rostersData = null;
+
+  async function fetchRosters() {
+    try {
+      const res = await fetch('rosters.json');
+      if (!res.ok) return;
+      rostersData = await res.json();
+      const datalist = document.getElementById('teamList');
+      rostersData.teams.forEach(team => {
+        const opt = document.createElement('option');
+        opt.value = team.name;
+        datalist.appendChild(opt);
+      });
+    } catch (e) {
+      // Silently fail — roster data is optional
+    }
+  }
+  fetchRosters();
+
+  function enableLoadButtons() {
+    const homeVal = document.getElementById('homeTeam').value.trim();
+    const awayVal = document.getElementById('awayTeam').value.trim();
+    document.getElementById('loadHomeRoster').disabled = !homeVal || !rostersData;
+    document.getElementById('loadAwayRoster').disabled = !awayVal || !rostersData;
+  }
+
+  document.getElementById('homeTeam').addEventListener('input', enableLoadButtons);
+  document.getElementById('awayTeam').addEventListener('input', enableLoadButtons);
+
+  function loadRoster(side) {
+    if (!rostersData) return;
+    const inputId = side === 'home' ? 'homeTeam' : 'awayTeam';
+    const teamName = document.getElementById(inputId).value.trim();
+    const team = rostersData.teams.find(t => t.name.toLowerCase() === teamName.toLowerCase());
+    if (!team) {
+      alert('Team "' + teamName + '" not found in roster data.\nCheck rosters.json and make sure the name matches exactly.');
+      return;
+    }
+
+    const players = team.players || [];
+    const captain = team.captain || '';
+
+    // Fill Singles Set 1 & 2 with player names (up to 5)
+    ['singles1', 'singles2'].forEach(sectionKey => {
+      const inputs = container.querySelectorAll(`.name-input[data-section="${sectionKey}"][data-side="${side}"]`);
+      inputs.forEach((inp, i) => {
+        const name = players[i] || '';
+        inp.value = name;
+        state.names[sectionKey][i][side] = name;
+      });
+    });
+
+    // Fill Doubles with paired names
+    const doubleInputs = container.querySelectorAll(`.name-input[data-section="doubles"][data-side="${side}"]`);
+    doubleInputs.forEach((inp, i) => {
+      const p1 = players[i * 2] || '';
+      const p2 = players[i * 2 + 1] || '';
+      const name = p1 && p2 ? p1 + ' / ' + p2 : (p1 || p2 || '');
+      inp.value = name;
+      state.names['doubles'][i][side] = name;
+    });
+
+    // Fill Captain's Match
+    const captainInput = container.querySelector(`.name-input[data-section="captains"][data-side="${side}"]`);
+    if (captainInput) {
+      captainInput.value = captain;
+      state.names['captains'][0][side] = captain;
+    }
+
+    // Shake the team box as feedback
+    const teamBox = document.getElementById(side === 'home' ? 'homeBox' : 'awayBox');
+    teamBox.classList.add('shake');
+    setTimeout(() => teamBox.classList.remove('shake'), 500);
+  }
+
+  document.getElementById('loadHomeRoster').addEventListener('click', () => loadRoster('home'));
+  document.getElementById('loadAwayRoster').addEventListener('click', () => loadRoster('away'));
 
   // ---- PWA Install ----
   let deferredPrompt = null;

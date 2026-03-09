@@ -1,0 +1,35 @@
+{
+  "season": "2025 Season 1",
+  "teams": [
+    {
+      "name": "Boogie House",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    },
+    {
+      "name": "Bulldog",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    },
+    {
+      "name": "Woodstock",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    },
+    {
+      "name": "Voodoo Lounge",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    },
+    {
+      "name": "Rhino",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    },
+    {
+      "name": "Station / MIX",
+      "captain": "",
+      "players": ["", "", "", "", "", ""]
+    }
+  ]
+}
