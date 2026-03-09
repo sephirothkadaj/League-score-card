@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a472a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>SSPL Scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-dark: #0d2818;
+    --green-mid: #1a472a;
+    --green-light: #2d5a3d;
+    --green-pale: #8fb89a;
+    --green-bg: #f0f7f2;
+    --gold: #e6a817;
+    --red-dark: #4a1a1a;
+    --red-mid: #6b2d2d;
+    --border-light: #b8ccbe;
+    --card-bg: linear-gradient(180deg, #ffffff 0%, #f4f8f5 100%);
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: linear-gradient(170deg, var(--green-dark) 0%, var(--green-mid) 30%, var(--green-light) 60%, var(--green-mid) 100%);
+    font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px calc(16px + env(safe-area-inset-bottom, 0px));
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .header { text-align: center; margin-bottom: 16px; }
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 6px;
+    color: var(--gold);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    line-height: 1;
+    font-weight: 400;
+  }
+  .header .sub {
+    font-family: 'Oswald', sans-serif;
+    font-size: 14px;
+    letter-spacing: 8px;
+    color: var(--green-pale);
+    margin-top: 2px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 520px;
+    background: var(--card-bg);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2);
+    padding: 16px 12px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  /* Team Headers */
+  .teams { display: flex; gap: 8px; margin-bottom: 12px; align-items: stretch; }
+  .team-box {
+    flex: 1;
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .team-home { background: linear-gradient(135deg, var(--green-mid), var(--green-light)); }
+  .team-away { background: linear-gradient(135deg, var(--red-dark), var(--red-mid)); }
+  .team-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px;
+    letter-spacing: 4px;
+    color: var(--gold);
+  }
+  .team-input {
+    width: 100%;
+    text-align: center;
+    font-size: 15px;
+    font-family: 'Oswald', sans-serif;
+    font-weight: 700;
+    background: rgba(255,255,255,0.12);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: #fff;
+    padding: 6px 4px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .team-input:focus { border-color: var(--gold); }
+  .team-input::placeholder { color: rgba(255,255,255,0.4); }
+  .team-total {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px;
+    color: #fff;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .team-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #7a9982;
+  }
+
+  /* Section Headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0 6px;
+    border-bottom: 2px solid var(--green-mid);
+    margin-bottom: 8px;
+  }
+  .section-header span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 3px;
+    color: var(--green-mid);
+    text-transform: uppercase;
+  }
+  .section { margin-top: 12px; }
+
+  /* Match Rows */
+  .match-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+  }
+  .name-input {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-family: 'Source Sans 3', sans-serif;
+    border: 1.5px solid var(--border-light);
+    border-radius: 5px;
+    background: #fafcfa;
+    color: var(--green-mid);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: var(--gold); }
+  .name-input.align-r { text-align: right; }
+  .name-input.align-l { text-align: left; }
+  .name-input::placeholder { color: #a0b5a6; }
+
+  .vs-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    color: #7a9982;
+    padding: 0 2px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  /* Checkboxes */
+  .win-check {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid var(--border-light);
+    background: var(--green-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .win-check.disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .win-check.home-checked {
+    border-color: var(--green-mid);
+    background: #c8e6d0;
+  }
+  .win-check.away-checked {
+    border-color: var(--red-mid);
+    background: #e6c8c8;
+  }
+  .win-check svg { display: none; }
+  .win-check.home-checked svg, .win-check.away-checked svg { display: block; }
+
+  /* Shuffle Buttons */
+  .shuffle-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 4px 0;
+    gap: 8px;
+  }
+  .shuffle-btn {
+    font-size: 11px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-weight: 600;
+    border-radius: 5px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .shuffle-home {
+    background: rgba(26,71,42,0.08);
+    color: var(--green-light);
+    border: 1px solid rgba(26,71,42,0.25);
+  }
+  .shuffle-home:active { background: rgba(26,71,42,0.25); }
+  .shuffle-away {
+    background: rgba(74,26,26,0.08);
+    color: var(--red-mid);
+    border: 1px solid rgba(74,26,26,0.25);
+  }
+  .shuffle-away:active { background: rgba(74,26,26,0.25); }
+
+  /* Action Buttons */
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .btn-export {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    background: var(--green-mid);
+    color: var(--gold);
+    border: 1.5px solid var(--green-light);
+    border-radius: 8px;
+    padding: 8px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-export:active { background: var(--green-light); }
+  .btn-reset {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 3px;
+    background: transparent;
+    color: #a04040;
+    border: 1.5px solid #c06060;
+    border-radius: 8px;
+    padding: 8px 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-reset:active { background: #a04040; color: #fff; }
+
+  .footer {
+    margin-top: 16px;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 11px;
+    color: #5a7a62;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Install Banner */
+  .install-banner {
+    display: none;
+    width: 100%;
+    max-width: 520px;
+    background: rgba(230,168,23,0.15);
+    border: 1px solid rgba(230,168,23,0.3);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    text-align: center;
+    color: var(--gold);
+    font-size: 13px;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .install-banner button {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 2px;
+    background: var(--gold);
+    color: var(--green-dark);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 20px;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+
+  @keyframes shakeIt {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px) rotate(-1deg); }
+    40% { transform: translateX(4px) rotate(1deg); }
+    60% { transform: translateX(-3px) rotate(-0.5deg); }
+    80% { transform: translateX(3px) rotate(0.5deg); }
+  }
+  .shake { animation: shakeIt 0.5s ease; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>POOL LEAGUE</h1>
+  <div class="sub">SCORECARD</div>
+</div>
+
+<div class="install-banner" id="installBanner">
+  Install this app to your home screen for quick access!
+  <br><button id="installBtn">INSTALL APP</button>
+</div>
+
+<div class="card" id="mainCard">
+  <!-- Teams -->
+  <div class="teams">
+    <div class="team-box team-home" id="homeBox">
+      <div class="team-label">HOME</div>
+      <input class="team-input" id="homeTeam" placeholder="Team Name">
+      <div class="team-total" id="homeTotal">0</div>
+    </div>
+    <div class="team-vs">VS</div>
+    <div class="team-box team-away" id="awayBox">
+      <div class="team-label">AWAY</div>
+      <input class="team-input" id="awayTeam" placeholder="Team Name">
+      <div class="team-total" id="awayTotal">0</div>
+    </div>
+  </div>
+
+  <!-- Sections will be built by JS -->
+  <div id="sectionsContainer"></div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn-export" id="exportBtn">📄 EXPORT PDF</button>
+    <button class="btn-reset" id="resetBtn">RESET ALL</button>
+  </div>
+</div>
+
+<div class="footer">SSPL Scorecard</div>
+
+<script>
+(function() {
+  // ---- Config ----
+  const SECTIONS = [
+    { key: 'singles1', title: 'Singles — Set 1', icon: '🎱', rows: 5, label: 'Player', shuffle: true },
+    { key: 'singles2', title: 'Singles — Set 2', icon: '🎱', rows: 5, label: 'Player', shuffle: true },
+    { key: 'doubles',  title: 'Doubles Matches', icon: '👥', rows: 2, label: 'Team',   shuffle: false },
+    { key: 'captains', title: "Captain's Match", icon: '👑', rows: 1, label: 'Captain', shuffle: false },
+  ];
+
+  // ---- State ----
+  const state = {
+    scores: {},   // { sectionKey: [ { home: false, away: false }, ... ] }
+    names: {},    // { sectionKey: [ { home: '', away: '' }, ... ] }
+  };
+
+  function initState() {
+    SECTIONS.forEach(s => {
+      state.scores[s.key] = Array.from({ length: s.rows }, () => ({ home: false, away: false }));
+      state.names[s.key] = Array.from({ length: s.rows }, () => ({ home: '', away: '' }));
+    });
+  }
+  initState();
+
+  // ---- DOM Building ----
+  const container = document.getElementById('sectionsContainer');
+
+  function buildSections() {
+    container.innerHTML = '';
+    SECTIONS.forEach((sec, si) => {
+      const wrapper = document.createElement('div');
+      if (si > 0) wrapper.className = 'section';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'section-header';
+      header.innerHTML = `<span style="font-family:sans-serif">${sec.icon}</span><span>${sec.title}</span>`;
+      wrapper.appendChild(header);
+
+      // Rows
+      for (let i = 0; i < sec.rows; i++) {
+        const row = document.createElement('div');
+        row.className = 'match-row';
+        row.innerHTML = `
+          <input class="name-input align-r" placeholder="${sec.label} ${i+1}" data-section="${sec.key}" data-index="${i}" data-side="home">
+          <div class="win-check" data-section="${sec.key}" data-index="${i}" data-side="home">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 10.5L8 14.5L16 6.5" stroke="#1a472a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="vs-label">vs</div>
+          <div class="win-check" data-section="${sec.key}" data-index="${i}" data-side="away">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4 10.5L8 14.5L16 6.5" stroke="#6b2d2d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <input class="name-input align-l" placeholder="${sec.label} ${i+1}" data-section="${sec.key}" data-index="${i}" data-side="away">
+        `;
+        wrapper.appendChild(row);
+      }
+
+      // Shuffle buttons
+      if (sec.shuffle) {
+        const shuffleRow = document.createElement('div');
+        shuffleRow.className = 'shuffle-row';
+        shuffleRow.innerHTML = `
+          <button class="shuffle-btn shuffle-home" data-section="${sec.key}" data-side="home">🎲 Shuffle Home</button>
+          <button class="shuffle-btn shuffle-away" data-section="${sec.key}" data-side="away">🎲 Shuffle Away</button>
+        `;
+        wrapper.appendChild(shuffleRow);
+      }
+
+      container.appendChild(wrapper);
+    });
+  }
+  buildSections();
+
+  // ---- Totals ----
+  function calcTotal(side) {
+    let t = 0;
+    SECTIONS.forEach(s => {
+      state.scores[s.key].forEach(r => { if (r[side]) t++; });
+    });
+    return t;
+  }
+
+  function updateTotals() {
+    document.getElementById('homeTotal').textContent = calcTotal('home');
+    document.getElementById('awayTotal').textContent = calcTotal('away');
+  }
+
+  // ---- Update checkbox visuals ----
+  function updateCheckboxVisuals(sectionKey, index) {
+    const row = state.scores[sectionKey][index];
+    const checks = container.querySelectorAll(`.win-check[data-section="${sectionKey}"][data-index="${index}"]`);
+    checks.forEach(el => {
+      const side = el.dataset.side;
+      const otherSide = side === 'home' ? 'away' : 'home';
+      const isChecked = row[side];
+      const otherChecked = row[otherSide];
+
+      el.classList.remove('home-checked', 'away-checked', 'disabled');
+      if (isChecked) {
+        el.classList.add(side === 'home' ? 'home-checked' : 'away-checked');
+      } else if (otherChecked) {
+        el.classList.add('disabled');
+      }
+    });
+  }
+
+  // ---- Event Delegation ----
+  container.addEventListener('click', function(e) {
+    const check = e.target.closest('.win-check');
+    if (!check) return;
+
+    const sec = check.dataset.section;
+    const idx = parseInt(check.dataset.index);
+    const side = check.dataset.side;
+    const otherSide = side === 'home' ? 'away' : 'home';
+    const row = state.scores[sec][idx];
+
+    // If other side is checked and this side isn't, block it
+    if (row[otherSide] && !row[side]) return;
+
+    // Toggle this side
+    row[side] = !row[side];
+
+    updateCheckboxVisuals(sec, idx);
+    updateTotals();
+  });
+
+  container.addEventListener('input', function(e) {
+    if (!e.target.classList.contains('name-input')) return;
+    const sec = e.target.dataset.section;
+    const idx = parseInt(e.target.dataset.index);
+    const side = e.target.dataset.side;
+    state.names[sec][idx][side] = e.target.value;
+  });
+
+  // Shuffle
+  container.addEventListener('click', function(e) {
+    const btn = e.target.closest('.shuffle-btn');
+    if (!btn) return;
+
+    const sec = btn.dataset.section;
+    const side = btn.dataset.side;
+    const sectionNames = state.names[sec].map(r => r[side]).filter(n => n.trim() !== '');
+    if (sectionNames.length === 0) return;
+
+    // Fisher-Yates shuffle
+    for (let i = sectionNames.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [sectionNames[i], sectionNames[j]] = [sectionNames[j], sectionNames[i]];
+    }
+
+    let idx = 0;
+    state.names[sec].forEach((row, i) => {
+      row[side] = idx < sectionNames.length ? sectionNames[idx++] : '';
+    });
+
+    // Update DOM inputs
+    const inputs = container.querySelectorAll(`.name-input[data-section="${sec}"][data-side="${side}"]`);
+    inputs.forEach((inp, i) => { inp.value = state.names[sec][i][side]; });
+
+    // Shake animation
+    const teamBox = document.getElementById(side === 'home' ? 'homeBox' : 'awayBox');
+    teamBox.classList.add('shake');
+    setTimeout(() => teamBox.classList.remove('shake'), 500);
+  });
+
+  // Reset
+  document.getElementById('resetBtn').addEventListener('click', function() {
+    initState();
+    document.getElementById('homeTeam').value = '';
+    document.getElementById('awayTeam').value = '';
+    // Reset all inputs and checkboxes
+    container.querySelectorAll('.name-input').forEach(inp => { inp.value = ''; });
+    container.querySelectorAll('.win-check').forEach(el => {
+      el.classList.remove('home-checked', 'away-checked', 'disabled');
+    });
+    updateTotals();
+  });
+
+  // ---- PDF Export ----
+  document.getElementById('exportBtn').addEventListener('click', function() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = doc.internal.pageSize.getWidth();
+    const cx = W / 2;
+    let y = 12;
+
+    const homeLabel = document.getElementById('homeTeam').value || 'Home';
+    const awayLabel = document.getElementById('awayTeam').value || 'Away';
+    const homeScore = calcTotal('home');
+    const awayScore = calcTotal('away');
+
+    // Green header bar
+    doc.setFillColor(26, 71, 42);
+    doc.rect(0, 0, W, 22, 'F');
+    doc.setTextColor(230, 168, 23);
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('POOL LEAGUE SCORECARD', cx, 15, { align: 'center' });
+
+    y = 32;
+
+    // Team totals
+    doc.setTextColor(26, 71, 42);
+    doc.setFontSize(16);
+    doc.text(homeLabel + ':  ' + homeScore, cx - 8, y, { align: 'right' });
+    doc.setTextColor(120);
+    doc.setFontSize(12);
+    doc.text('vs', cx, y, { align: 'center' });
+    doc.setTextColor(107, 45, 45);
+    doc.setFontSize(16);
+    doc.text(awayScore + '  :' + awayLabel, cx + 8, y, { align: 'left' });
+
+    y += 12;
+
+    const sectionLabels = {
+      singles1: 'Singles — Set 1',
+      singles2: 'Singles — Set 2',
+      doubles: 'Doubles Matches',
+      captains: "Captain's Match",
+    };
+    const rowLabels = { singles1: 'Player', singles2: 'Player', doubles: 'Team', captains: 'Captain' };
+
+    SECTIONS.forEach(sec => {
+      // Section line
+      doc.setDrawColor(26, 71, 42);
+      doc.setLineWidth(0.4);
+      doc.line(20, y, W - 20, y);
+      y += 6;
+
+      // Section title
+      doc.setTextColor(26, 71, 42);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(sectionLabels[sec.key], cx, y, { align: 'center' });
+      y += 6;
+
+      // Column headers
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(130);
+      doc.text(homeLabel, 52, y, { align: 'center' });
+      doc.text('W', 78, y, { align: 'center' });
+      doc.text('W', W - 78, y, { align: 'center' });
+      doc.text(awayLabel, W - 52, y, { align: 'center' });
+      y += 5;
+
+      state.scores[sec.key].forEach((row, i) => {
+        const hName = state.names[sec.key][i].home || rowLabels[sec.key] + ' ' + (i + 1);
+        const aName = state.names[sec.key][i].away || rowLabels[sec.key] + ' ' + (i + 1);
+
+        doc.setTextColor(40);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(hName, 52, y, { align: 'center' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(row.home ? 26 : 180, row.home ? 71 : 180, row.home ? 42 : 180);
+        doc.text(row.home ? '✓' : '—', 78, y, { align: 'center' });
+
+        doc.setTextColor(160);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('vs', cx, y, { align: 'center' });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(row.away ? 107 : 180, row.away ? 45 : 180, row.away ? 45 : 180);
+        doc.text(row.away ? '✓' : '—', W - 78, y, { align: 'center' });
+
+        doc.setTextColor(40);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(aName, W - 52, y, { align: 'center' });
+
+        y += 6;
+      });
+
+      y += 4;
+    });
+
+    // Final bar
+    y += 2;
+    doc.setFillColor(26, 71, 42);
+    doc.rect(20, y, W - 40, 12, 'F');
+    doc.setTextColor(230, 168, 23);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FINAL:  ' + homeLabel + '  ' + homeScore + '  —  ' + awayScore + '  ' + awayLabel, cx, y + 8.5, { align: 'center' });
+
+    // Footer
+    y += 22;
+    doc.setTextColor(150);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    doc.text('SSPL Scorecard  •  ' + dateStr, cx, y, { align: 'center' });
+
+    doc.save('SSPL_' + homeLabel.replace(/\s+/g, '_') + '_vs_' + awayLabel.replace(/\s+/g, '_') + '.pdf');
+  });
+
+  // ---- PWA Install ----
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').style.display = 'block';
+  });
+
+  document.getElementById('installBtn').addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+    document.getElementById('installBanner').style.display = 'none';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('installBanner').style.display = 'none';
+  });
+
+  // ---- Service Worker ----
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+})();
+</script>
+</body>
+</html>
